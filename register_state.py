@@ -147,11 +147,30 @@ class RegisterState(ABC):
     def register_size(self):
         return self._register_size
 
-    def read_state(self):
-        raise NotImplementedError
+    def _read_raw(self):
+        return {addr: self._read_register(addr) for addr in self._addr_to_regs}
 
-    def write_state(self):
-        raise NotImplementedError
+    def read_state(self):
+        raw_values = self._read_raw()
+        for addr, rawval in raw_values.items():
+            for regv in self._addr_to_regs[addr]:
+                regv.value = (rawval & regv.bitmask) >> regv.nbits
+        return raw_values
+
+    def write_state(self, only_update=True):
+        raw_values = None
+        if only_updates:
+            raw_values = self._read_raw()
+
+        # for each address, build the expected value from the corresponding registers
+        for addr in self._addr_to_regs:
+            newval = raw_values[addr] if only_update else 0
+            for regv in self._addr_to_regs[addr]:
+                newval &= ~regv.bitmask&(2**self._register_size - 1)
+                newval |= regv.value << self.offset
+
+                if not only_update or newval != raw_values[addr]:
+                    self._write_register(addr, newval)
 
     @abstractmethod
     def _read_register(self, address):
