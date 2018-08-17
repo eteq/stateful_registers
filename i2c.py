@@ -1,3 +1,5 @@
+import i2c
+
 from .register_state import RegisterState
 
 __all__ = ['I2CRegisterState']
