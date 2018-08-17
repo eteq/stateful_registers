@@ -10,7 +10,7 @@ import copy
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
-__all__ = ['RegisterState', 'RegisterValue']
+__all__ = ['RegisterState', 'RegisterValue', 'MultiRegisterValue']
 
 
 class RegisterValue:
