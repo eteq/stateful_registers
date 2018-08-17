@@ -173,16 +173,17 @@ class RegisterState(ABC):
                     self._write_register(addr, newval)
 
     @abstractmethod
-    def _read_register(self, address):
+    def _read_register(self, address, ntimes=None):
         """
-        Reads a single register
+        Reads a single register.  If ``ntimes`` is None the single value,
+        otherwise continues reading until `ntimes` words have been read
         """
         raise NotImplementedError
 
     @abstractmethod
     def _write_register(self, address, value):
         """
-        Writes to a register.  ``value`` could be a list, which means write to
-        multiple consecutive registers
+        Writes to a register.  ``value`` could be a list, which means write in a
+        single operation
         """
         raise NotImplementedError

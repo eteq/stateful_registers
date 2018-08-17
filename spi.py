@@ -22,8 +22,16 @@ class SPIRegisterState(RegisterState):
         self.spi = spidev.SpiDev()
         self.spi.open(spi_bus, spi_device)
 
-    def _read_register(self, address):
-        return self.spi.xfer([address & self._read_bitmask_and, 0])[1]
+    def _read_register(self, address, ntimes=None):
+        read_word = address & self._read_bitmask_and
+        if ntimes is None:
+            return self.spi.xfer([read_word, 0])[1]
+        else:
+            return self.spi.xfer2([read_word] + [0]*ntimes)[1:]
 
     def _write_register(self, address, value):
-        self.spi.xfer([address | self._write_bitmask_or, value])
+        if isinstance(value, int):
+            self.spi.xfer([address | self._write_bitmask_or, value])
+        else:
+            # assume multi-write
+            self.spi.xfer2([address | self._write_bitmask_or] + value)
