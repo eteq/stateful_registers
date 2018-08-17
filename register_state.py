@@ -153,24 +153,40 @@ class RegisterState(ABC):
     def read_state(self):
         raw_values = self._read_raw()
         for addr, rawval in raw_values.items():
-            for regv in self._addr_to_regs[addr]:
-                regv.value = (rawval & regv.bitmask) >> regv.nbits
+            self._update_state_by_register(addr, rawval)
         return raw_values
+
+    def _update_state_by_register(self, addr, val, skip_writeable=False):
+        for regv in self._addr_to_regs[addr]:
+            if skip_writeable and regv.writeable:
+                continue
+            regv.value = (val & regv.bitmask) >> regv.nbits
 
     def write_state(self, only_update=True):
         raw_values = None
-        if only_updates:
+        if only_update:
             raw_values = self._read_raw()
 
         # for each address, build the expected value from the corresponding registers
         for addr in self._addr_to_regs:
             newval = raw_values[addr] if only_update else 0
+            read_back = False
             for regv in self._addr_to_regs[addr]:
+                if regv.writeable is None:
+                    read_back = True
+                elif not regv.writeable:
+                    continue
+
+                # set everythink at the bitmask to 0
                 newval &= ~regv.bitmask&(2**self._register_size - 1)
-                newval |= regv.value << self.offset
+                if regv.value != 0:
+                    newval |= regv.value << self.offset
 
                 if not only_update or newval != raw_values[addr]:
                     self._write_register(addr, newval)
+            if read_back:
+                rval = self._read_register(addr)
+                self._update_state_by_register(addr, rval, skip_writeable=True)
 
     @abstractmethod
     def _read_register(self, address, ntimes=None):
