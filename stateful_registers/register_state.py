@@ -165,7 +165,7 @@ class RegisterState(ABC):
         for regv in self._addr_to_regs[addr]:
             if skip_writeable and regv.writeable:
                 continue
-            regv.value = (val & regv.bitmask) >> regv.nbits
+            regv.value = (val & regv.bitmask) >> regv.offset
 
     def write_state(self, only_update=True):
         raw_values = None

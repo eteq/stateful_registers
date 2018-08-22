@@ -28,7 +28,7 @@ class BME280BaseRegisterState:
         RegisterValue('osrs_t', 0xF4, offset=5, nbits=3, writeable=True),
         RegisterValue('measuring', 0xF3, offset=0, nbits=1, writeable=False),
         RegisterValue('im_update', 0xF3, offset=3, nbits=1, writeable=False),
-        RegisterValue('osrs_t', 0xF2, offset=0, nbits=3, writeable=True),
+        RegisterValue('osrs_h', 0xF2, offset=0, nbits=3, writeable=True),
         RegisterValue('reset', 0xE0, offset=0, nbits=8, writeable=True),
         RegisterValue('id', 0xD0, offset=0, nbits=8, writeable=False),
     ]
