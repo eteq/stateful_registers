@@ -35,7 +35,7 @@ class BME280BaseRegisterState:
     BME280_REGISTERS += [
         MultiRegisterValue('hum', BME280_REGISTERS[:2]),
         MultiRegisterValue('temp', BME280_REGISTERS[2:5]),
-        MultiRegisterValue('hum', BME280_REGISTERS[5:8]),
+        MultiRegisterValue('press', BME280_REGISTERS[5:8]),
     ]
     BME280_REGISTERS += [RegisterValue('calib{:02}'.format(i), 0x88 + i,
                                        nbits=8, writeable=False)

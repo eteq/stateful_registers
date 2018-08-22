@@ -118,7 +118,7 @@ class RegisterState(ABC):
         self._name_to_multireg = {r.name: r.copy() for r in regs
                                   if isinstance(r, MultiRegisterValue)}
         for mr in self._name_to_multireg.values():
-            mr.registers = (mr._name_to_reg[r.name] for r in mr.registers)
+            mr.registers = (self._name_to_reg[r.name] for r in mr.registers)
 
         addr_to_regs_temp = defaultdict(list)
         for r in self._name_to_reg.values():
@@ -139,7 +139,10 @@ class RegisterState(ABC):
                 raise ValueError('Register values go past the word size in address {}: {}'.format(addr, regs))
 
     def get_register(self, name):
-        return self._name_to_reg[name]
+        if name in self._name_to_multireg:
+            return self._name_to_multireg[name]
+        else:
+            return self._name_to_reg[name]
 
     def get_registers_at_address(self, address):
         return self._addr_to_regs[address]
