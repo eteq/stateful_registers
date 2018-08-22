@@ -1,4 +1,7 @@
-import spidev
+try:
+    import spidev
+except ImportError:
+    spidev = None
 
 from .register_state import RegisterState
 
@@ -13,6 +16,9 @@ class SPIRegisterState(RegisterState):
     """
     def __init__(self, registers, spi_bus, spi_device, register_size=8,
                  write_bit=7):
+        if spidev is None:
+            raise ImportError('spidev not present, cannot use SPIRegisterState')
+            
         super().__init__(registers, register_size)
         self.write_bit = write_bit
 
