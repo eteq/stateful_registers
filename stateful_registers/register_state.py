@@ -118,7 +118,7 @@ class RegisterState(ABC):
         self._name_to_multireg = {r.name: r.copy() for r in regs
                                   if isinstance(r, MultiRegisterValue)}
         for mr in self._name_to_multireg.values():
-            mr.registers = (self._name_to_reg[r.name] for r in mr.registers)
+            mr.registers = tuple((self._name_to_reg[r.name] for r in mr.registers))
 
         addr_to_regs_temp = defaultdict(list)
         for r in self._name_to_reg.values():
@@ -188,7 +188,7 @@ class RegisterState(ABC):
                 # set everythink at the bitmask to 0
                 newval &= ~regv.bitmask&(2**self._register_size - 1)
                 if regv.value != 0:
-                    newval |= regv.value << self.offset
+                    newval |= regv.value << regv.offset
 
                 if not only_update or newval != raw_values[addr]:
                     self._write_register(addr, newval)
