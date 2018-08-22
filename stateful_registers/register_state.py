@@ -42,14 +42,15 @@ class RegisterValue:
     _infofields = ('name', 'address', 'offset', 'nbits', 'writeable',
                    'description')
     def __repr__(self):
-        infostr = ', '.join(['{}='.format(nm, getattr(self, nm)) for nm in self._infofields])
-        return '<RegisterValue at {: {}>'.format(hex(id(self)), infostr)
+        infostr = ', '.join(['{}={}'.format(nm, repr(getattr(self, nm))) for nm in self._infofields])
+        return '<RegisterValue at {} : {}>'.format(hex(id(self)), infostr)
 
     def copy(self):
         return copy.copy(self)
 
+    @property
     def bitmask(self):
-        return 2**self.nbytes - 1 << self.offset
+        return 2**self.nbits - 1 << self.offset
 
     @property
     def register_value(self):
@@ -124,7 +125,7 @@ class RegisterState(ABC):
             addr_to_regs_temp[r.address].append(r)
         self._addr_to_regs = a2r = {}
         for addr in addr_to_regs_temp:
-            addr_to_regs_temp[addr].sort(lambda val: val.offset)
+            addr_to_regs_temp[addr].sort(key=lambda val: val.offset)
             a2r[addr] = regs = tuple(addr_to_regs_temp[addr])
 
             # validate that there are no overlapping register words

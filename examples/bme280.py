@@ -8,7 +8,8 @@ from stateful_registers import (RegisterValue, MultiRegisterValue,
 
 class BME280BaseRegisterState:
     def __init__(self, **kwargs):
-        super().__init__(self.BME280_REGISTERS, **kwargs)
+        kwargs.setdefault('registers', self.BME280_REGISTERS)
+        super().__init__(**kwargs)
 
     BME280_REGISTERS = [
         RegisterValue('hum_lsb', 0xFE, nbits=8, writeable=False),
@@ -46,5 +47,7 @@ class BME280BaseRegisterState:
 class BMESPIRegisterState(BME280BaseRegisterState, SPIRegisterState):
     pass
 
-class BMESPIRegisterState(BME280BaseRegisterState, I2CRegisterState):
-    pass
+class BMEI2CRegisterState(BME280BaseRegisterState, I2CRegisterState):
+    def __init__(self, **kwargs):
+        kwargs.setdefault('device_address', 0x77)
+        super().__init__(**kwargs)
