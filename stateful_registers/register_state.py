@@ -8,7 +8,7 @@ options are for the specific peripheral.
 import copy
 
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 __all__ = ['RegisterState', 'RegisterValue', 'MultiRegisterValue']
 
@@ -123,7 +123,7 @@ class RegisterState(ABC):
         addr_to_regs_temp = defaultdict(list)
         for r in self._name_to_reg.values():
             addr_to_regs_temp[r.address].append(r)
-        self._addr_to_regs = a2r = {}
+        self._addr_to_regs = a2r = OrderedDict()
         for addr in addr_to_regs_temp:
             addr_to_regs_temp[addr].sort(key=lambda val: val.offset)
             a2r[addr] = regs = tuple(addr_to_regs_temp[addr])
@@ -143,6 +143,10 @@ class RegisterState(ABC):
 
     def get_registers_at_address(self, address):
         return self._addr_to_regs[address]
+
+    @property
+    def register_names(self):
+        return tuple(self._name_to_reg.keys())
 
     @property
     def register_size(self):
