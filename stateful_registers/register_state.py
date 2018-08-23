@@ -232,6 +232,8 @@ class RegisterState(ABC):
             newval = raw_values[addr] if only_update else 0
             read_back = False
             for regv in self._addr_to_regs[addr]:
+                if regv.value is None:
+                    continue
                 if regv.writeable is None:
                     read_back = True
                 elif not regv.writeable:
