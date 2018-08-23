@@ -155,28 +155,80 @@ class RegisterState(ABC):
     def register_size(self):
         return self._register_size
 
-    def _read_raw(self):
-        return {addr: self._read_register(addr) for addr in self._addr_to_regs}
+    def _read_raw(self, registers, groupread):
+        if registers is None:
+            addrs = self._addr_to_regs.keys()
+        else:
+            addrs = sorted(set([reg.address for reg in registers]))
+        if groupread:
+            minaddr = min(addrs)
+            vals = self._read_register(minaddr, ntimes=max(addrs) - minaddr + 1)
+            return {(minaddr + i): v for i, v in enumerate(vals)}
+        else:
+            return {addr: self._read_register(addr) for addr in addrs}
 
-    def read_state(self):
-        raw_values = self._read_raw()
-        for addr, rawval in raw_values.items():
-            self._update_state_by_register(addr, rawval)
+    def read_state(self, registers=None, groupread='multi', update_all=True):
+        """
+        Updates the state from the device.  If ```registers` is None, update all
+        registers, otherwise should be a list of registers, and only addresses
+        from that register will be.
+
+        If ``groupread`` is True, lump the reads into one call.  If 'multi',
+        only group the reads that are MultiRegisterValue's.
+
+        If ``update_all`` is True, this updates everything that was read even if
+        it wasn't specifically asked for.  If False, only ``registers`` are
+        updated.
+        """
+
+        # convert any MultiRegisterValue's to their constituent registers
+        if registers is not None:
+            registers = list(registers)
+            mr_idxs = [i for i, r in enumerate(registers)
+                       if isinstance(i, MultiRegisterValue)]
+            for i in mr_idxs[::-1]:
+                mr = registers.pop(i)
+                registers.extend(mr.registers)
+            registers = set(registers)
+
+        if groupread == 'multi':
+            raw_values = self.read_state(registers=registers, groupread=False,
+                                         update_all=update_all)
+            for mr in self._name_to_multireg.values():
+                regs_to_up = [reg for reg in mr.registers if reg in registers]
+                raw_values.update(self.read_state(regs_to_up, groupread=True,
+                                                  update_all=update_all))
+        else:
+            raw_values = self._read_raw(registers, groupread)
+            r2c = registers if update_all else None
+            for addr, rawval in raw_values.items():
+                self._update_state_by_register(addr, rawval, regs_to_check=r2c)
         return raw_values
 
-    def _update_state_by_register(self, addr, val, skip_writeable=False):
+    def _update_state_by_register(self, addr, val, skip_writeable=False,
+                                  regs_to_check=None):
+        """
+        regs_to_check of None means check everything, otherwise it's a list of
+        register objects.
+        """
         for regv in self._addr_to_regs[addr]:
             if skip_writeable and regv.writeable:
                 continue
+            if regs_to_check is not None and regv not in regs_to_check:
+                continue
             regv.value = (val & regv.bitmask) >> regv.offset
 
-    def write_state(self, only_update=True):
+    def write_state(self, registers=None, only_update=True):
         raw_values = None
         if only_update:
             raw_values = self._read_raw()
+        if registers is None:
+            addrs = self._addr_to_regs.keys()
+        else:
+            addrs = [reg.address for reg in registers]
 
         # for each address, build the expected value from the corresponding registers
-        for addr in self._addr_to_regs:
+        for addr in addrs:
             newval = raw_values[addr] if only_update else 0
             read_back = False
             for regv in self._addr_to_regs[addr]:
