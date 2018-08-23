@@ -27,8 +27,21 @@ class I2CRegisterState(RegisterState):
             raise TypeError('device_address must be an int')
         self._device_address = val
 
-    def _read_register(self, address):
-        return self.bus.read_byte_data(self._device_address, address)
+    def _read_register(self, address, ntimes=None):
+        if ntimes is None:
+            return self.bus.read_byte_data(self._device_address, address)
+        elif ntimes > 32:
+            raise ValueError('i2c cannot read more than 32 bytes at once, asked'
+                             ' for {}'.format(ntimes))
+        else:
+            return self.bus.read_i2c_block_data(self._device_address, address, ntimes)
 
     def _write_register(self, address, value):
-        self.bus.write_byte_data(self._device_address, address, value)
+        if isinstance(value, int):
+            self.bus.write_byte_data(self._device_address, address, value)
+        elif len(value) > 32:
+            raise ValueError('i2c cannot write more than 32 bytes at once, '
+                             'tried to write {}'.format(len(value)))
+        else:
+            # assume multi-write
+            self.bus.write_i2c_block_data(self._device_address, address, value)
