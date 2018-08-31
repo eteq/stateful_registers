@@ -44,8 +44,12 @@ class BME280BaseRegisterState:
                                     nbits=8, writeable=False)
                          for i in range(26, 42)]
 
+
 class BMESPIRegisterState(BME280BaseRegisterState, SPIRegisterState):
-    pass
+    def __init__(self, spi_bus, spi_device):
+        kwargs = dict(spi_bus=spi_bus, spi_device=spi_device, write_bits=-7,
+                      register_size=8, max_speed_hz=7800000)
+        super().__init__(**kwargs)
 
 class BMEI2CRegisterState(BME280BaseRegisterState, I2CRegisterState):
     def __init__(self, **kwargs):

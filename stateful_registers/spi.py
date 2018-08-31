@@ -13,12 +13,14 @@ class SPIRegisterState(RegisterState):
     write_bit : int
         the bit to set to indicate a write operation.  If negative, setting the
         bit means read.
+    max_speed_hz : int or None
+        The speed of the SPI bus or None to use default
     """
     def __init__(self, registers, spi_bus, spi_device, register_size=8,
-                 write_bit=7):
+                 write_bit=7, max_speed_hz=None):
         if spidev is None:
             raise ImportError('spidev not present, cannot use SPIRegisterState')
-            
+
         super().__init__(registers, register_size)
         self.write_bit = write_bit
 
@@ -27,6 +29,8 @@ class SPIRegisterState(RegisterState):
 
         self.spi = spidev.SpiDev()
         self.spi.open(spi_bus, spi_device)
+        if max_speed_hz is not None:
+            self.spi.max_speed_hz = max_speed_hz
 
     def _read_register(self, address, ntimes=None):
         read_word = address & self._read_bitmask_and
