@@ -47,7 +47,7 @@ class BME280BaseRegisterState:
 
 class BMESPIRegisterState(BME280BaseRegisterState, SPIRegisterState):
     def __init__(self, spi_bus, spi_device):
-        kwargs = dict(spi_bus=spi_bus, spi_device=spi_device, write_bits=-7,
+        kwargs = dict(spi_bus=spi_bus, spi_device=spi_device, write_bit=-7,
                       register_size=8, max_speed_hz=7800000)
         super().__init__(**kwargs)
 
