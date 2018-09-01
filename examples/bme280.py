@@ -41,8 +41,126 @@ class BME280BaseRegisterState:
                                        nbits=8, writeable=False)
                          for i in range(26)]
     BME280_REGISTERS += [RegisterValue('calib{:02}'.format(i), 0xE1 + i - 26,
-                                    nbits=8, writeable=False)
+                                       nbits=8, writeable=False)
                          for i in range(26, 42)]
+
+    def read_env(self):
+        """
+        Reads and returns the calibrated (temp, pressure, humidity) tuple, in
+        units of (degC, Pa, %)
+        """
+        env_regs = (self._name_to_multireg['temp'],
+                    self._name_to_multireg['pressure'],
+                    self._name_to_multireg['hum'])
+        self.read_state(env_regs, groupread=True)
+
+        self._update_calibs()
+
+        t, t_fine = self._compensate_temp(env_regs[0].value)
+        p = self._compensate_press(env_regs[1].value, t_fine)
+        h = self._compensate_hum(env_regs[2].value, t_fine)
+
+        return t, p, h
+
+    def _update_calibs(self):
+        def calib_u16(calibnum0, swap=False, shift1=8):
+            """
+            The "weird" ones are [3:0], [11:4]
+            """
+            c0 = self.get_register('calib'+str(calibnum0)).value
+            c1 = self.get_register('calib'+str(calibnum0+1)).value
+            if swap:
+                c0, c1 = c1, c0
+            return c0 + c1 << shift1
+
+        def calib_s16(calibnum0, swap=False, shift1=8):
+            cal = calib_u16(calibnum0, swap, weird)
+            if cal > 32767:
+                cal -= 65536
+            return cal
+
+        def calib_u8(calibnum0):
+            return self.get_register('calib'+str(calibnum0)).value
+
+        def calib_s8(calibnum0):
+            cal = calib_u8(calibnum0)
+            if cal > 127:
+                cal -= 256
+            return cal
+
+        self._calib = {}
+        self._calib['T1'] = calib_u16(0)
+        self._calib['T2'] = calib_s16(2)
+        self._calib['T3'] = calib_s16(4)
+
+        self._calib['P1'] = calib_u16(6)
+        self._calib['P2'] = calib_s16(8)
+        self._calib['P3'] = calib_s16(10)
+        self._calib['P4'] = calib_s16(12)
+        self._calib['P5'] = calib_s16(14)
+        self._calib['P6'] = calib_s16(16)
+        self._calib['P7'] = calib_s16(18)
+        self._calib['P8'] = calib_s16(20)
+        self._calib['P9'] = calib_s16(22)
+
+        self._calib['H1'] = calib_u8(24)
+        self._calib['H2'] = calib_s16(25)
+        self._calib['H3'] = calib_u8(27)
+        self._calib['H4'] = calib_s16(28, True, shift1=4)
+        self._calib['H5'] = calib_s16(30, shift1=4)
+        self._calib['H6'] = calib_s8(32)
+
+
+    def _compensate_temp(self, adc_t):
+        """
+        Returns t_true, t_fine where the former is in deg C and the latter is
+        for _compensate_press
+        """
+        dig_T1, dig_T2, dig_T3 = (self._calibs['T'+str(i+1)] for i in range(3))
+
+        var1 = (adc_t/16384.0 - dig_T1/1024.) * dig_T2
+        var1 = (adc_t/16384.0 - dig_T1/1024.) * dig_T2
+        var2 = ((adc_t/131072.0 - dig_T1/8192.0) * (adc_t/131072.0 - dig_T1/8192.0)) * dig_T3;
+        t_fine = var1 + var2
+        t_true = t_fine / 5120.0
+        return t_true, t_fine
+
+    def _compensate_press(self, adc_p, t_fine):
+        dig_P1, dig_P2, dig_P3 = (self._calibs['P'+str(i+1)] for i in range(3))
+        dig_P4, dig_P5, dig_P6 = (self._calibs['P'+str(i+4)] for i in range(3))
+        dig_P7, dig_P8, dig_P9 = (self._calibs['P'+str(i+7)] for i in range(3))
+
+        var1 = (t_fine/2.0) - 64000.0
+        var2 = var1 * var1 * dig_P6 / 32768.0
+        var2 = var2 + var1 * dig_P5 * 2.0
+        var2 = (var2/4.0)+(dig_P4 * 65536.0)
+        var1 = (dig_P3 * var1 * var1 / 524288.0 + dig_P2 * var1) / 524288.0
+        var1 = (1.0 + var1 / 32768.0)*dig_P1
+        if (var1 == 0.0):
+            return 0  # avoid exception caused by division by zero
+
+        p = 1048576.0 - adc_p
+        p = (p - (var2 / 4096.0)) * 6250.0 / var1
+        var1 = dig_P9 * p * p / 2147483648.0
+        var2 = p * dig_P8 / 32768.0
+        return p + (var1 + var2 + dig_P7) / 16.0
+
+    def _compensate_hum(self, adc_h, t_fine):
+        dig_H1, dig_H2, dig_H3 = (self._calibs['H'+str(i+1)] for i in range(3))
+        dig_H4, dig_H5, dig_H6 = (self._calibs['H'+str(i+4)] for i in range(3))
+
+        var_H = t_fine - 76800.0
+        var_H = ((adc_h - (dig_H4 * 64.0 + dig_H5 / 16384.0 * var_H)) *
+                 (dig_H2 / 65536.0 * (1.0 + dig_H6 / 67108864.0 * var_H *
+                 (1.0 + dig_H3 / 67108864.0 * var_H))))
+        var_H = var_H * (1.0 - dig_H1 * var_H / 524288.0)
+
+        if (var_H > 100.0):
+            return 100.0
+        elif (var_H < 0.0):
+            return 0.0
+        else:
+            return var_H
 
 
 class BMESPIRegisterState(BME280BaseRegisterState, SPIRegisterState):
