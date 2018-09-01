@@ -195,7 +195,9 @@ class RegisterState(ABC):
             raw_values = self.read_state(registers=registers, groupread=False,
                                          update_all=update_all)
             for mr in self._name_to_multireg.values():
-                regs_to_up = [reg for reg in mr.registers if reg in registers]
+                regs_to_up = mr.registers
+                if registers is not None:
+                    regs_to_up = [reg for reg in regs_to_up if reg in registers]
                 raw_values.update(self.read_state(regs_to_up, groupread=True,
                                                   update_all=update_all))
         else:
@@ -219,13 +221,14 @@ class RegisterState(ABC):
             regv.value = (val & regv.bitmask) >> regv.offset
 
     def write_state(self, registers=None, only_update=True):
-        raw_values = None
-        if only_update:
-            raw_values = self._read_raw()
         if registers is None:
             addrs = self._addr_to_regs.keys()
         else:
             addrs = [reg.address for reg in registers]
+
+        raw_values = None
+        if only_update:
+            raw_values = self._read_raw(registers, False)
 
         # for each address, build the expected value from the corresponding registers
         for addr in addrs:
