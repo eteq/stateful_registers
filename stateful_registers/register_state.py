@@ -180,29 +180,37 @@ class RegisterState(ABC):
         it wasn't specifically asked for.  If False, only ``registers`` are
         updated.
         """
+        if registers is None:
+            registers = list(self._name_to_reg.values())
+            registers.extend(self._name_to_multireg.values())
+        else:
+            registers = list(registers)
 
         # convert any MultiRegisterValue's to their constituent registers
-        if registers is not None:
-            registers = list(registers)
-            mr_idxs = [i for i, r in enumerate(registers)
-                       if isinstance(i, MultiRegisterValue)]
-            for i in mr_idxs[::-1]:
-                mr = registers.pop(i)
-                registers.extend(mr.registers)
-            registers = set(registers)
+        multi_subregisters = []
+        mr_idxs = [i for i, r in enumerate(registers)
+                   if isinstance(r, MultiRegisterValue)]
+        for i in mr_idxs[::-1]:
+            mr = registers.pop(i)
+            multi_subregisters.append(mr.registers)
+        for reg in multi_subregisters:
+            if reg in registers:
+                registers.remove(reg)
 
         if groupread == 'multi':
+            # first all those that are *not* multiregs
             raw_values = self.read_state(registers=registers, groupread=False,
                                          update_all=update_all)
-            for mr in self._name_to_multireg.values():
-                regs_to_up = mr.registers
-                if registers is not None:
-                    regs_to_up = [reg for reg in regs_to_up if reg in registers]
-                raw_values.update(self.read_state(regs_to_up, groupread=True,
+
+            #now the multis
+            for regset in multi_subregisters:
+                raw_values.update(self.read_state(regset, groupread=True,
                                                   update_all=update_all))
         else:
+            for regset in multi_subregisters:
+                registers.extend(regset)
             raw_values = self._read_raw(registers, groupread)
-            r2c = registers if update_all else None
+            r2c = None if update_all else registers
             for addr, rawval in raw_values.items():
                 self._update_state_by_register(addr, rawval, regs_to_check=r2c)
         return raw_values
