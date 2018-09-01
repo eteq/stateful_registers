@@ -50,7 +50,7 @@ class BME280BaseRegisterState:
         units of (degC, Pa, %)
         """
         env_regs = (self._name_to_multireg['temp'],
-                    self._name_to_multireg['pressure'],
+                    self._name_to_multireg['press'],
                     self._name_to_multireg['hum'])
         self.read_state(env_regs, groupread=True)
 
@@ -67,14 +67,14 @@ class BME280BaseRegisterState:
             """
             The "weird" ones are [3:0], [11:4]
             """
-            c0 = self.get_register('calib'+str(calibnum0)).value
-            c1 = self.get_register('calib'+str(calibnum0+1)).value
+            c0 = self.get_register('calib{:02}'.format(calibnum0)).value
+            c1 = self.get_register('calib{:02}'.format(calibnum0+1)).value
             if swap:
                 c0, c1 = c1, c0
             return c0 + c1 << shift1
 
         def calib_s16(calibnum0, swap=False, shift1=8):
-            cal = calib_u16(calibnum0, swap, weird)
+            cal = calib_u16(calibnum0, swap, shift1)
             if cal > 32767:
                 cal -= 65536
             return cal
