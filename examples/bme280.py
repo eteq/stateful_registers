@@ -110,13 +110,12 @@ class BME280BaseRegisterState:
         self._calib['H5'] = calib_s16(30, shift1=4)
         self._calib['H6'] = calib_s8(32)
 
-
     def _compensate_temp(self, adc_t):
         """
         Returns t_true, t_fine where the former is in deg C and the latter is
         for _compensate_press
         """
-        dig_T1, dig_T2, dig_T3 = (self._calibs['T'+str(i+1)] for i in range(3))
+        dig_T1, dig_T2, dig_T3 = (self._calib['T'+str(i+1)] for i in range(3))
 
         var1 = (adc_t/16384.0 - dig_T1/1024.) * dig_T2
         var1 = (adc_t/16384.0 - dig_T1/1024.) * dig_T2
@@ -126,9 +125,9 @@ class BME280BaseRegisterState:
         return t_true, t_fine
 
     def _compensate_press(self, adc_p, t_fine):
-        dig_P1, dig_P2, dig_P3 = (self._calibs['P'+str(i+1)] for i in range(3))
-        dig_P4, dig_P5, dig_P6 = (self._calibs['P'+str(i+4)] for i in range(3))
-        dig_P7, dig_P8, dig_P9 = (self._calibs['P'+str(i+7)] for i in range(3))
+        dig_P1, dig_P2, dig_P3 = (self._calib['P'+str(i+1)] for i in range(3))
+        dig_P4, dig_P5, dig_P6 = (self._calib['P'+str(i+4)] for i in range(3))
+        dig_P7, dig_P8, dig_P9 = (self._calib['P'+str(i+7)] for i in range(3))
 
         var1 = (t_fine/2.0) - 64000.0
         var2 = var1 * var1 * dig_P6 / 32768.0
@@ -146,8 +145,8 @@ class BME280BaseRegisterState:
         return p + (var1 + var2 + dig_P7) / 16.0
 
     def _compensate_hum(self, adc_h, t_fine):
-        dig_H1, dig_H2, dig_H3 = (self._calibs['H'+str(i+1)] for i in range(3))
-        dig_H4, dig_H5, dig_H6 = (self._calibs['H'+str(i+4)] for i in range(3))
+        dig_H1, dig_H2, dig_H3 = (self._calib['H'+str(i+1)] for i in range(3))
+        dig_H4, dig_H5, dig_H6 = (self._calib['H'+str(i+4)] for i in range(3))
 
         var_H = t_fine - 76800.0
         var_H = ((adc_h - (dig_H4 * 64.0 + dig_H5 / 16384.0 * var_H)) *
