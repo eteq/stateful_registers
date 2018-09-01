@@ -183,6 +183,8 @@ class RegisterState(ABC):
         if registers is None:
             registers = list(self._name_to_reg.values())
             registers.extend(self._name_to_multireg.values())
+        elif isinstance(registers, (RegisterValue, MultiRegisterValue)):
+            registers = [registers]
         else:
             registers = list(registers)
 
@@ -229,6 +231,9 @@ class RegisterState(ABC):
             regv.value = (val & regv.bitmask) >> regv.offset
 
     def write_state(self, registers=None, only_update=True):
+        if isinstance(registers, (RegisterValue, MultiRegisterValue)):
+            registers = [registers]
+
         if registers is None:
             addrs = self._addr_to_regs.keys()
         else:
