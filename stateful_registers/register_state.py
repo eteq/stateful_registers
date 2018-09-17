@@ -40,7 +40,7 @@ class RegisterValue:
         self._value = None
 
     _infofields = ('name', 'address', 'offset', 'nbits', 'writeable',
-                   'description')
+                   'description', 'value')
     def __repr__(self):
         infostr = ', '.join(['{}={}'.format(nm, repr(getattr(self, nm))) for nm in self._infofields])
         return '<RegisterValue at {} : {}>'.format(hex(id(self)), infostr)
