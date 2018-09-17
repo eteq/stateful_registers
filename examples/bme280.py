@@ -9,6 +9,7 @@ from stateful_registers import (RegisterValue, MultiRegisterValue,
 class BME280BaseRegisterState:
     def __init__(self, **kwargs):
         kwargs.setdefault('registers', self.BME280_REGISTERS)
+        self._rh_to_dewpoint = _rh_to_dewpoint_magnus
         super().__init__(**kwargs)
 
     BME280_REGISTERS = [
@@ -44,10 +45,13 @@ class BME280BaseRegisterState:
                                        nbits=8, writeable=False)
                          for i in range(26, 42)]
 
-    def read_env(self):
+    def read_env(self, tunit='F', punit='Pa', hunit='%'):
         """
-        Reads and returns the calibrated (temp, pressure, humidity) tuple, in
-        units of (degC, Pa, %)
+        Reads and returns the calibrated (temp, pressure, humidity) tuple
+
+        `tunit` can be 'F', 'C', or 'K'
+        `punit` can be 'Pa', 'atm', 'mmHg', or 'inHg'
+        `hunit` can be '%' (relatve), 'C', 'F', or 'K' (dewpoint)
         """
         env_regs = (self._name_to_multireg['temp'],
                     self._name_to_multireg['press'],
@@ -56,9 +60,14 @@ class BME280BaseRegisterState:
 
         self._update_calibs()
 
+        # internal units are C, Pa, perc
         t, t_fine = self._compensate_temp(env_regs[0].value)
         p = self._compensate_press(env_regs[1].value, t_fine)
         h = self._compensate_hum(env_regs[2].value, t_fine)
+
+        t = self._convert_t(t, tunit)
+        p = self._convert_p(p, punit)
+        h = self._convert_h(h, hunit, t)
 
         return t, p, h
 
@@ -161,6 +170,56 @@ class BME280BaseRegisterState:
         else:
             return var_H
 
+    def _convert_t(self, t, tunit):
+        if tunit == 'C':
+            return t
+        elif tunit == 'F':
+            return t * 1.8 + 32
+        elif tunit == 'K':
+            return t - 273.15
+        else:
+            raise NotImplementedError("Unrecognized temp unit {}".format(tunit))
+
+        def _convert_p(self, p, punit):
+            if punit == 'Pa':
+                return p
+            elif punit == 'atm':
+                return p * 0.00000986923267
+            elif punit == 'mmHg':
+                return p / 133.322387415
+            elif punit == 'inHg':
+                return p / 3386.389
+            else:
+                raise NotImplementedError("Unrecognized pressure unit {}".format(punit))
+
+            def _convert_h(self, h, hunit, tinc):
+                if hunit == '%':
+                    return h
+                elif hunit in ('C', 'F', 'K'):
+                    dewpointc = self._rh_to_dewpoint(h, tinc)
+                    return self._convert_t(dewpointc, hunit)
+                else:
+                    raise NotImplementedError("Unrecognized humidity unit {}".format(hunit))
+
+def _rh_to_dewpoint_magnus(rh, tc, b=18.678, c=257.14):
+    """
+    See https://en.wikipedia.org/wiki/Dew_point#Calculating_the_dew_point
+    b = 18.678, c = 257.14 °C
+    """
+    from math import log as ln
+
+    gam = ln(rh/100.) + b*tc / (c + tc)
+    return c*gam / (b - gam)
+
+def _rh_to_dewpoint_ardenbuck(rh, tc, b=18.678, c=257.14, d=234.5):
+    """
+    See https://en.wikipedia.org/wiki/Dew_point#Calculating_the_dew_point
+    b = 18.678, c = 257.14 °C, d = 234.5 °C.
+    """
+    from math import exp, log as ln
+
+    gam_m = ln((rh/100.)*exp((b - tc/d)*(tc/(c + tc))))
+    return c*gam_m / (b - gam_m)
 
 class BMESPIRegisterState(BME280BaseRegisterState, SPIRegisterState):
     def __init__(self, spi_bus, spi_device):
