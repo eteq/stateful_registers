@@ -180,26 +180,26 @@ class BME280BaseRegisterState:
         else:
             raise NotImplementedError("Unrecognized temp unit {}".format(tunit))
 
-        def _convert_p(self, p, punit):
-            if punit == 'Pa':
-                return p
-            elif punit == 'atm':
-                return p * 0.00000986923267
-            elif punit == 'mmHg':
-                return p / 133.322387415
-            elif punit == 'inHg':
-                return p / 3386.389
-            else:
-                raise NotImplementedError("Unrecognized pressure unit {}".format(punit))
+    def _convert_p(self, p, punit):
+        if punit == 'Pa':
+            return p
+        elif punit == 'atm':
+            return p * 0.00000986923267
+        elif punit == 'mmHg':
+            return p / 133.322387415
+        elif punit == 'inHg':
+            return p / 3386.389
+        else:
+            raise NotImplementedError("Unrecognized pressure unit {}".format(punit))
 
-            def _convert_h(self, h, hunit, tinc):
-                if hunit == '%':
-                    return h
-                elif hunit in ('C', 'F', 'K'):
-                    dewpointc = self._rh_to_dewpoint(h, tinc)
-                    return self._convert_t(dewpointc, hunit)
-                else:
-                    raise NotImplementedError("Unrecognized humidity unit {}".format(hunit))
+    def _convert_h(self, h, hunit, tinc):
+        if hunit == '%':
+            return h
+        elif hunit in ('C', 'F', 'K'):
+            dewpointc = self._rh_to_dewpoint(h, tinc)
+            return self._convert_t(dewpointc, hunit)
+        else:
+            raise NotImplementedError("Unrecognized humidity unit {}".format(hunit))
 
 def _rh_to_dewpoint_magnus(rh, tc, b=18.678, c=257.14):
     """
