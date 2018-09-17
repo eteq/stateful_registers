@@ -266,6 +266,22 @@ class RegisterState(ABC):
                 rval = self._read_register(addr)
                 self._update_state_by_register(addr, rval, skip_writeable=True)
 
+    def set_and_write_register(self, regorname, newvalue, **kwargs):
+        """
+        Sets the value of a register and then immediately writes it.  Returns
+        the value (which may be different from ``newvalue`` depending on the
+        register).  ``regorname`` may be a `RegisterValue` or a string.
+        """
+        if isinstance(regorname, RegisterValue):
+            reg = regorname
+        else:
+            reg = self.get_register(regorname)
+
+        reg.value = newvalue
+        self.write_state(reg, **kwargs)
+
+        return reg.value
+
     @abstractmethod
     def _read_register(self, address, ntimes=None):
         """
