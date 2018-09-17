@@ -65,9 +65,9 @@ class BME280BaseRegisterState:
         p = self._compensate_press(env_regs[1].value, t_fine)
         h = self._compensate_hum(env_regs[2].value, t_fine)
 
+        h = self._convert_h(h, hunit, t)  # needs t in deg C
         t = self._convert_t(t, tunit)
         p = self._convert_p(p, punit)
-        h = self._convert_h(h, hunit, t)
 
         return t, p, h
 
