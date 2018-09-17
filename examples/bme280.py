@@ -103,10 +103,10 @@ class BME280BaseRegisterState:
         self._calib['P8'] = calib_s16(20)
         self._calib['P9'] = calib_s16(22)
 
-        self._calib['H1'] = calib_u8(24)
-        self._calib['H2'] = calib_s16(25)
-        self._calib['H3'] = calib_u8(27)
-        self._calib['H4'] = calib_s16(28, True, shift1=4)
+        self._calib['H1'] = calib_u8(25)
+        self._calib['H2'] = calib_s16(26)
+        self._calib['H3'] = calib_u8(28)
+        self._calib['H4'] = calib_s16(29, True, shift1=4)
         self._calib['H5'] = calib_s16(30, shift1=4)
         self._calib['H6'] = calib_s8(32)
 
