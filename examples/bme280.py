@@ -97,6 +97,11 @@ class BME280BaseRegisterState:
                 cal -= 256
             return cal
 
+        cregs = [r for n, r in self._name_to_reg if n.startswith('calib')]
+        if any([r.value is None for r in cregs]):
+            # something's not been read yet...
+            self.read_state(cregs)
+
         self._calib = {}
         self._calib['T1'] = calib_u16(0)
         self._calib['T2'] = calib_s16(2)
