@@ -71,7 +71,7 @@ class BME280BaseRegisterState:
             c1 = self.get_register('calib{:02}'.format(calibnum0+1)).value
             if swap:
                 c0, c1 = c1, c0
-            return c0 + c1 << shift1
+            return c0 + (c1 << shift1)
 
         def calib_s16(calibnum0, swap=False, shift1=8):
             cal = calib_u16(calibnum0, swap, shift1)
@@ -118,8 +118,8 @@ class BME280BaseRegisterState:
         dig_T1, dig_T2, dig_T3 = (self._calib['T'+str(i+1)] for i in range(3))
 
         var1 = (adc_t/16384.0 - dig_T1/1024.) * dig_T2
-        var1 = (adc_t/16384.0 - dig_T1/1024.) * dig_T2
-        var2 = ((adc_t/131072.0 - dig_T1/8192.0) * (adc_t/131072.0 - dig_T1/8192.0)) * dig_T3;
+        var2 = ((adc_t/131072.0 - dig_T1/8192.0) * (adc_t/131072.0 - dig_T1/8192.0)) * dig_T3
+
         t_fine = var1 + var2
         t_true = t_fine / 5120.0
         return t_true, t_fine
